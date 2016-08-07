@@ -1,39 +1,5 @@
 // Lists
 
-import XCTest
-
-// http://initwithstyle.net/2015/11/tdd-in-swift-playgrounds/
-class PlaygroundTestObserver : NSObject, XCTestObservation {
-    @objc func testCase(testCase: XCTestCase, didFailWithDescription description: String, inFile filePath: String?, atLine lineNumber: UInt) {
-        print("Test failed on line \(lineNumber): \(testCase.name), \(description)")
-    }
-}
-
-let observer = PlaygroundTestObserver()
-let center = XCTestObservationCenter.sharedTestObservationCenter()
-center.addTestObserver(observer)
-
-struct TestRunner {
-    func runTests(testClass: AnyClass) {
-        print("Running test suite \(testClass)")
-        
-        let tests = testClass as! XCTestCase.Type
-        let testSuite = tests.defaultTestSuite()
-        testSuite.runTest()
-        let run = testSuite.testRun as! XCTestSuiteRun
-        
-        print("Ran \(run.executionCount) tests in \(run.testDuration)s with \(run.totalFailureCount) failures")
-    }
-}
-
-class ListTests: XCTestCase {
-    func testShouldFail() {
-        XCTFail()
-    }
-}
-
-TestRunner().runTests(ListTests)
-
 enum ListError: ErrorType {
     case Empty
     case Subscript
@@ -47,12 +13,21 @@ enum List<Element> {
 }
 
 extension List: CustomStringConvertible {
+    func internalDescription() -> String {
+        switch self {
+        case .empty:
+            return ""
+        case let .cons(x, xs):
+            return ", \(x)\(xs.internalDescription())"
+        }
+    }
+    
     var description: String {
         switch self {
         case .empty:
             return "[]"
         case let .cons(x, xs):
-            return "\(x) : \(xs.description)"
+            return "[\(x)\(xs.internalDescription())]"
         }
     }
 }
@@ -65,6 +40,21 @@ extension List: ArrayLiteralConvertible {
             print(element)
         }
         self = list
+    }
+}
+
+func ==<Element: Equatable> (left: List<Element>, right: List<Element>) -> Bool {
+    switch (left, right) {
+    case (.empty, .empty):
+        return true
+    case let (.cons(x, xs), .cons(y, ys)):
+        if x == y {
+            return xs == ys
+        } else {
+            return false
+        }
+    default:
+        return false
     }
 }
 
@@ -139,24 +129,22 @@ func ++<Element> (left: List<Element>, right: List<Element>) -> List<Element> {
     }
 }
 
-func ==<Element: Equatable> (left: List<Element>, right: List<Element>) -> Bool {
-    switch (left, right) {
-    case (.empty, .empty):
-        return true
-    case let (.cons(x, xs), .cons(y, ys)):
-        if x == y {
-            return xs == ys
-        } else {
-            return false
-        }
-    default:
-        return false
+func suffixes<Element>(xs: List<Element>) -> List<List<Element>> {
+    switch xs {
+    case .empty:
+        return List(arrayLiteral: empty())
+    case let .cons(_, xss):
+        return cons(xs,tail: suffixes(xss))
     }
 }
 
-func suffixes<Element>(xs: List<Element>) -> List<List<Element>> {
-    return empty()
-}
+let fromLiteral = List(arrayLiteral: 1, 2, 3)
+let naive = cons(1, tail: cons(2, tail: cons(3, tail: empty())))
+fromLiteral == naive
+
+let list = List(arrayLiteral: 1, 2, 3, 4)
+let sfxs = List(arrayLiteral: List(arrayLiteral: 1, 2, 3, 4), List(arrayLiteral: 2, 3, 4), List(arrayLiteral: 3, 4), List(arrayLiteral: 4), empty())
+//suffixes(list) == sfxs
 
 let l: List<Int> = empty()
 isEmpty(l)
@@ -174,4 +162,5 @@ let newList = concat(shortList, ys:longList)
 let oneMoreList = concat(longList, ys: shortList)
 let anotherList = shortList ++ longList
 let updatedList = try! update(longList, index: 0, value: 143)
+suffixes(shortList)
 

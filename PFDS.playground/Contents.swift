@@ -132,9 +132,9 @@ func ++<Element> (left: List<Element>, right: List<Element>) -> List<Element> {
 func suffixes<Element>(xs: List<Element>) -> List<List<Element>> {
     switch xs {
     case .empty:
-        return List(arrayLiteral: empty())
+        return cons(xs, tail: empty())
     case let .cons(_, xss):
-        return cons(xs,tail: suffixes(xss))
+        return cons(xs, tail: suffixes(xss))
     }
 }
 
@@ -144,14 +144,14 @@ fromLiteral == naive
 
 let list = List(arrayLiteral: 1, 2, 3, 4)
 let sfxs = List(arrayLiteral: List(arrayLiteral: 1, 2, 3, 4), List(arrayLiteral: 2, 3, 4), List(arrayLiteral: 3, 4), List(arrayLiteral: 4), empty())
-//suffixes(list) == sfxs
+suffixes(list)
 
 let l: List<Int> = empty()
 isEmpty(l)
 isEmpty(l)
 
 do {
-    try  head(l)
+    try head(l)
 } catch {
     print("thrown")
 }
@@ -162,5 +162,75 @@ let newList = concat(shortList, ys:longList)
 let oneMoreList = concat(longList, ys: shortList)
 let anotherList = shortList ++ longList
 let updatedList = try! update(longList, index: 0, value: 143)
-suffixes(shortList)
+
+
+// Trees. Sets
+
+enum Tree<Element> {
+    case empty
+    indirect case leaf(Tree, Element, Tree)
+    
+    init() { self = .empty }
+    init(value: Element) { self = .leaf(.empty, value, .empty) }
+}
+
+//protocol Set {
+//    associatedtype ItemType
+//    func empty() -> Self
+//    func insert(_: Self, newValue: ItemType) -> Self
+//    func member(_: Self, value: ItemType) -> Bool
+//}
+
+extension Tree: CustomStringConvertible {
+    var description: String {
+        switch self {
+        case .empty:
+            return "Empty"
+        case let .leaf(left, value, right):
+            return "(Leaf \(left) \(value) \(right))"
+            
+        }
+    }
+}
+
+func empty<Element>() -> Tree<Element> {
+    return .empty
+}
+
+func insert<Element: Comparable>(tree: Tree<Element>, newValue: Element) -> Tree<Element> {
+    switch tree {
+    case .empty:
+        return .leaf(.empty, newValue, .empty)
+    case let .leaf(left, existingValue, right):
+        if newValue < existingValue {
+            return .leaf(insert(left, newValue: newValue), existingValue, right)
+        } else if newValue > existingValue {
+            return .leaf(left, existingValue, insert(right, newValue: newValue))
+        } else {
+            return tree
+        }
+    }
+}
+
+func member<Element: Comparable>(tree: Tree<Element>, value: Element) -> Bool {
+    switch tree {
+    case .empty:
+        return false
+    case let .leaf(left, existingValue, right):
+        if value < existingValue {
+            return member(left, value: value)
+        } else if (value > existingValue) {
+            return member(right, value: value)
+        } else {
+            return true
+        }
+        
+    }
+}
+
+var t = Tree(value: 10)
+t = insert(t, newValue: 15)
+t = insert(t, newValue: 7)
+member(t, value: 10)
+member(t, value: 71)
 
